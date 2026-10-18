@@ -1,4 +1,4 @@
-# SecGen helper scripts (Proxmox dev/test)
+# SecGen helper scripts
 
 Small wrappers for building and testing on a Proxmox cluster. Run them by path
 from the checkout or worktree you're working in (`scripts/secgen-dev-run ...`): each
@@ -14,6 +14,7 @@ bundler at the main checkout's gems.
 | `scripts/secgen-test-run <projects/.../secgen_test/<mod>.rb>` | Runs one module's post-provision test against its built VM over the QEMU Guest Agent. Exits 0 PASS / 1 FAIL / 2 SKIP; writes `<project>/test_results/<system>/<mod>.json` (plus evidence on FAIL). |
 | `scripts/pve-check [--all]` | Read-only: PVE version and the QEMU Guest Agent option on every template (or all VMs). |
 | `scripts/agent-check <vmid> [node]` | Read-only guest-agent smoke test (`id`, `hostname`, IPs) via `lib/helpers/proxmox_connection.rb`. |
+| `scripts/secgen-box-add <catalog-name>` | Resumes a SecGen VirtualBox base-box download, validates its SHA-256 checksum from the catalog, and adds it to Vagrant. Use after an interrupted base-box download, e.g. `scripts/secgen-box-add bookworm-base`. Cache location: `~/.cache/secgen/boxes` (override with `SECGEN_BOX_CACHE`). |
 
 ## Setup
 

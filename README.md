@@ -117,6 +117,7 @@ Notes:
 - **Ubuntu 20.04 (Ruby 2.7):** HashiCorp's apt repository no longer verifies on 20.04; install Vagrant from the `.deb` on https://releases.hashicorp.com/vagrant/ instead. Don't install the `ruby-bundler` package. It brings a Debian-packaged `thor` gem, and `bundle install` then fails with "Could not find thor-0.19.4.gem". Use `sudo gem install bundler -v 2.4.22` as above (2.4 is the last Bundler release that supports Ruby 2.7).
 - **Ruby 4.0:** `bundle install` re-resolves a few gems (librarian-puppet and its dependencies) and rewrites Gemfile.lock locally, because the versions pinned for Ruby 2.7 don't allow Ruby 4.
 - Already using SecGen on an older system? After pulling, run `sudo bundle install` again.
+- **Bundler cannot find `rsync-1.0.9.gem`:** RubyGems still publishes this transitive dependency of `librarian-puppet`; refresh Bundler's index and install it directly, then retry: `sudo gem install rsync -v 1.0.9 --source https://rubygems.org && sudo bundle install --full-index`.
 - **Memory:** on VirtualBox, VMs built on desktop bases (Kali, Debian KDE) get 3000 MB each, other VMs 1024 MB, so a CTF with an attack VM and a desktop target (such as `scenarios/ctf/nosferatu.xml`) needs about 6 GB of free RAM. Override with `--memory-per-vm` or `--total-memory`.
 
 To use the Windows basesboxes you will need to install Packer. Use the following command:

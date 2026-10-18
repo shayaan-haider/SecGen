@@ -9,7 +9,8 @@ class CronWritableScriptTest < PostProvisionTest
 
   def test_module
     super
-    test_local_command('cron.sh is world-writable?', 'sudo ls -la /opt/cron.sh', 'rwxrwxrwx')
+    cron_script = %q(sudo sh -c 'crontab -l | awk '\''/^# Puppet Name: writable_cron_script$/ { found=1; next } found && $0 !~ /^#/ && NF >= 6 { print $6; exit }'\'' | xargs -r ls -ld')
+    test_local_command('cron script is world-writable?', cron_script, 'rwxrwxrwx')
     test_local_command('cron job exists?', 'sudo crontab -l', 'writable_cron_script')
   end
 end

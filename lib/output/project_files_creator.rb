@@ -7,7 +7,7 @@ require_relative 'xml_cybok_generator.rb'
 require_relative 'ctfd_generator.rb'
 require 'fileutils'
 require 'librarian'
-require 'zip/zip'
+require 'zip'
 require 'json'
 
 class ProjectFilesCreator
@@ -194,7 +194,7 @@ class ProjectFilesCreator
 
     # zip up the CTFd export
     begin
-      Zip::ZipFile.open(ctfdfile, Zip::ZipFile::CREATE) { |zipfile|
+      Zip::File.open(ctfdfile, create: true) { |zipfile|
         zipfile.mkdir("db")
         ctfd_files.each do |ctfd_file_name, ctfd_file_content|
           zipfile.get_output_stream("db/#{ctfd_file_name}") { |f|

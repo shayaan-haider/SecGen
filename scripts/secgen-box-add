@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# Download and install a SecGen VirtualBox base box, resuming interrupted downloads.
+# Usage: scripts/secgen-box-add <catalog-name>
+# Example: scripts/secgen-box-add bookworm-base
+set -euo pipefail
+
+if [[ $# -ne 1 || ! $1 =~ ^[A-Za-z0-9._-]+$ ]]; then
+  echo "Usage: $0 <catalog-name>" >&2
+  echo "Example: $0 bookworm-base" >&2
+  exit 2
+fi
+
+catalog_name=$1
+box_base_url=${SECGEN_BOX_BASE_URL:-https://hacktivity.co.uk/files/vagrant_boxes}
+cache_dir=${SECGEN_BOX_CACHE:-"$HOME/.cache/secgen/boxes"}
+metadata_file="$cache_dir/${catalog_name}.json"
+details_file="$cache_dir/${catalog_name}.details"
+local_catalog_file="$cache_dir/${catalog_name}-local.json"
+
+mkdir -p "$cache_dir"
+
+# Keep catalog and box downloads resumable; curl retains the partial file after a
+# transient connection failure so rerunning this script continues where it stopped.
+curl --fail --location --retry 10 --retry-all-errors --retry-delay 3 \
+  --output "$metadata_file" "$box_base_url/${catalog_name}.json"
+
+ruby -rjson -e '
+  catalog = JSON.parse(File.read(ARGV.fetch(0)))
+  version = catalog.fetch("versions").max_by { |entry| Gem::Version.new(entry.fetch("version")) }
+  provider = version.fetch("providers").find do |entry|
+    entry["name"] == "virtualbox" && [nil, "amd64", "x86_64"].include?(entry["architecture"])
+  end
+  abort "No amd64 VirtualBox provider in box catalog" unless provider
+  abort "Box catalog does not provide a SHA-256 checksum" unless provider["checksum_type"] == "sha256" && provider["checksum"]
+  puts catalog.fetch("name")
+  puts version.fetch("version")
+  puts provider.fetch("url")
+  puts provider.fetch("checksum")
+' "$metadata_file" > "$details_file"
+
+mapfile -t details < "$details_file"
+box_name=${details[0]}
+box_version=${details[1]}
+box_url=${details[2]}
+box_checksum=${details[3]}
+box_file="$cache_dir/${box_url%%\?*}"
+box_file=${box_file##*/}
+box_file="$cache_dir/$box_file"
+
+if [[ -f "$box_file" ]] && printf '%s  %s\n' "$box_checksum" "$box_file" | sha256sum --check --status; then
+  printf 'Using verified download %s\n' "$box_file"
+else
+  printf 'Downloading %s %s to %s\n' "$box_name" "$box_version" "$box_file"
+  curl --fail --http1.1 --location --continue-at - --retry 10 --retry-all-errors --retry-delay 3 \
+    --output "$box_file" "$box_url"
+  printf '%s  %s\n' "$box_checksum" "$box_file" | sha256sum --check --status
+fi
+
+# Vagrant only accepts --box-version for a catalog, not a direct .box path. Point
+# a local catalog at the verified cached file so the installed version still
+# satisfies the version required by SecGen's generated Vagrantfile.
+ruby -rjson -ruri -e '
+  name, version, checksum, box_file, output = ARGV
+  catalog = {
+    "name" => name,
+    "versions" => [{
+      "version" => version,
+      "providers" => [{
+        "name" => "virtualbox",
+        "architecture" => "amd64",
+        "url" => URI::DEFAULT_PARSER.escape("file://#{File.expand_path(box_file)}"),
+        "checksum_type" => "sha256",
+        "checksum" => checksum
+      }]
+    }]
+  }
+  File.write(output, JSON.generate(catalog))
+' "$box_name" "$box_version" "$box_checksum" "$box_file" "$local_catalog_file"
+
+vagrant box add --force "$local_catalog_file"
+printf 'Installed %s (%s) for VirtualBox.\n' "$box_name" "$box_version"

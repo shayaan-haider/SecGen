@@ -170,6 +170,11 @@ end -%>
 "      vb.gui = #{gui}\n" -%>
 <%= no_pae = (@options.has_key? :nopae) ? 'off' : 'on'
 "      vb.customize ['modifyvm', :id, '--pae', '#{no_pae}']\n" -%>
+    # SecGen does not use USB passthrough. Disabling USB and the inherited EHCI
+    # controller keeps base boxes bootable without VirtualBox's proprietary
+    # Extension Pack.
+    vb.customize ['modifyvm', :id, '--usb', 'off']
+    vb.customize ['modifyvm', :id, '--usbehci', 'off']
 <%= if @cpu_word_size == '32-bit'
 if @options.has_key? :hwvirtex
 "      vb.customize ['modifyvm', :id, '--hwvirtex', 'on']\n"
